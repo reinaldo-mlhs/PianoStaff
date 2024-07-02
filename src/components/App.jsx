@@ -205,7 +205,7 @@ const QuaterNote = ({ note, flip }) => {
 
     return (
         <div id="quater-note" style={{ position: "relative" }}>
-            <Accidental accidental={note.substring(1,2)} x="25px" y="73px" size="26px" />
+            <Accidental accidental={note.substring(1,2)} x="10px" y="73px" size="26px" />
             {flip ?
                 <div style={{ position: "absolute", left: "22px" }}>
                     <svg width="30" height="100" xmlns="http://www.w3.org/2000/svg" transform="scale(-1,1)">
