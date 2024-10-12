@@ -1,4 +1,4 @@
-const { app, BrowserWindow, Menu } = require('electron');
+const { app, BrowserWindow, Menu, ipcMain } = require('electron');
 const path = require('node:path');
 
 // Handle creating/removing shortcuts on Windows when installing/uninstalling.
@@ -23,10 +23,42 @@ const createWindow = () => {
         { role: 'quit' }
       ]
     },
+    {
+      label: 'MIDI',
+      submenu: [
+        {
+          label: "Find MIDI devices",
+          click: () => { mainWindow.webContents.send("MIDI-connections") }
+        },
+        {
+          label: "Devices",
+          submenu: []
+        }
+      ]
+    }
   ];
 
   const menu = Menu.buildFromTemplate(template);
   Menu.setApplicationMenu(menu);
+
+  ipcMain.on('MIDI-connections', (event, devices) => {
+
+    const deviceMenuItems = devices.map(deviceName => {
+      
+      return {
+        label: deviceName,
+        type: "radio",
+        click: () => { mainWindow.webContents.send("MIDI-connect", deviceName) }
+      }
+    })
+
+    template[1].submenu[1].submenu = [
+      ...deviceMenuItems
+    ]
+
+    const menu = Menu.buildFromTemplate(template);
+    Menu.setApplicationMenu(menu);
+  })
 
   // and load the index.html of the app.
   if (MAIN_WINDOW_VITE_DEV_SERVER_URL) {
@@ -36,7 +68,7 @@ const createWindow = () => {
   }
 
   // Open the DevTools.
-  // mainWindow.webContents.openDevTools();
+  mainWindow.webContents.openDevTools();
 };
 
 // This method will be called when Electron has finished

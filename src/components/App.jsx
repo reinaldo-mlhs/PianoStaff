@@ -44,7 +44,6 @@ function getNoteLetterAndOctave(note_number, musicKey) {
 }
 
 function getNotesLetterAndOctave(notes_number, musicKey) {
-    // return notes_number.sort().map(n => getNoteLetterAndOctave(n, musicKey));
     return notes_number.sort().reduce((previous, current, index) => {
         const A = getNoteLetterAndOctave(current, musicKey);
         const B = shouldFlipNote(previous, A, index, musicKey);
@@ -77,12 +76,34 @@ const App = () => {
     const [pressedNotes, setPressedNotes] = React.useState([]);
 
     React.useEffect(() => {
-        console.log("requesting midi access...");
         navigator.requestMIDIAccess().then((midiAccess) => {
-            // Get lists of available MIDI controllers
-            Array.from(midiAccess.inputs).forEach((input) => {
-                input[1].onmidimessage = (msg) => {
-                    // console.log(msg.data);
+            findMIDIDevices(midiAccess);
+
+            window.electronAPI.onMIDIConnect((deviceName) => {
+                console.log("###################################")
+                connectMIDIDevice(deviceName, midiAccess);
+            })
+        
+            window.electronAPI.onFindMIDIConnections(() => {
+                findMIDIDevices(midiAccess);
+            });
+        });
+    }, []);
+
+    // const disconnectAllMIDIInputs = async (inputs) => {
+    //     console.log("disconnecting all MIDI inputs...");
+    //     const disconnectPromises = inputs.map(input => input.close());
+    //     const results = await Promise.all(disconnectPromises);
+    //     return results;
+    // }
+
+    const connectMIDIDevice = (deviceName, midiAccess) => {
+        let inputs = Array.from(midiAccess.inputs).map(input => input[1]);
+        // inputs = await disconnectAllMIDIInputs(inputs);
+        
+        inputs.forEach(input => {
+            if (input.name === deviceName) {
+                input.onmidimessage = (msg) => {
 
                     const [state, note, velocity] = msg.data;
                     if (state === 156) {
@@ -97,17 +118,32 @@ const App = () => {
                         setPressedNotes(prev => prev.filter(n => n !== note));
                     }
                 };
-            });
-
-            // const outputs = midiAccess.outputs.values();
-
-            midiAccess.onstatechange = (event) => {
-                // Print information about the (dis)connected MIDI controller
-                console.log(event.port.name, event.port.manufacturer, event.port.state);
-            };
+            }
+            else {
+                input.onmidimessage = (msg) => {};
+            }
         });
-    }, []);
 
+        midiAccess.onstatechange = (event) => {
+            // Print information about the (dis)connected MIDI controller
+            console.log(event.port.name, event.port.manufacturer, event.port.state);
+        };
+
+        return inputs.find(device => device.name === deviceName);;
+    }
+
+    // const handleDeviceConnection = async (deviceName, midiAccess) => {
+    //     const device = await connectMIDIDevice(deviceName, midiAccess);
+    // }
+
+    const findMIDIDevices = (midiAccess) => {
+        const inputs = Array.from(midiAccess.inputs).map(input => input[1]);
+
+        const devices = inputs.map(input => {
+            return input.name;
+        });
+        window.electronAPI.onFoundMIDIConnections(devices);
+    }
 
     return (
         <div style={{ display: "flex", flexDirection: "column", alignItems: "center" }}>
